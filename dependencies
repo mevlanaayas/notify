@@ -1,0 +1,5 @@
+go get github.com/sendgrid/sendgrid-go
+go get github.com/gin-gonic/gin
+go get github.com/joho/godotenv
+
+docker run -e "SENDGRID_API_KEY=api-key" -e "USER_NAME=username" -e "PASSWORD=password" -d -p 7077:7070 godoc
