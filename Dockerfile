@@ -21,6 +21,8 @@ WORKDIR /app
 # we run go build to compile the binary
 # executable of our Go program
 RUN go build -o main .
+# expose port
+EXPOSE 7777
 # Our start command which kicks off
 # our newly created binary executable
 CMD ["/app/main"]
