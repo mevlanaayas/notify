@@ -49,6 +49,28 @@ func setupRouter() *gin.Engine {
 
 	})
 
+	router.POST("sendSms", func(c *gin.Context) {
+		var smsData SMSData
+		if err := c.ShouldBindJSON(&smsData); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		err, response := SendSMS(
+			smsData.FromNumber,
+			smsData.ToNumber,
+			smsData.Message)
+		if err == nil {
+			c.JSON(200, gin.H{
+				"message": response,
+			})
+		} else {
+			c.JSON(400, gin.H{
+				"message": response,
+			})
+		}
+
+	})
+
 	return router
 }
 
