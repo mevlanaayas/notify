@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"github.com/getsentry/sentry-go"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"net/http"
+	"os"
 )
 
 func setupRouter() *gin.Engine {
@@ -80,6 +82,14 @@ func main() {
 		fmt.Print(e)
 	}
 
+	err := sentry.Init(sentry.ClientOptions{
+		Dsn: os.Getenv("SENTRY_DSN"),
+	})
+
+	if err != nil {
+		fmt.Printf("Sentry initialization failed: %v\n", err)
+	}
+
 	router := setupRouter()
-	_ = router.Run(":7777")
+	_ = router.Run(":7070")
 }

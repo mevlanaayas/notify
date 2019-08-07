@@ -7,6 +7,7 @@ RUN apk add --no-cache git
 RUN go get -u github.com/gin-gonic/gin
 RUN go get -u github.com/joho/godotenv
 RUN go get -u github.com/sendgrid/sendgrid-go
+RUN go get github.com/getsentry/sentry-go
 # We create an /app directory within our
 # image that will hold our application source
 # files
@@ -22,7 +23,7 @@ WORKDIR /app
 # executable of our Go program
 RUN go build -o main .
 # expose port
-EXPOSE 7777
+EXPOSE 7070
 # Our start command which kicks off
 # our newly created binary executable
 CMD ["/app/main"]
