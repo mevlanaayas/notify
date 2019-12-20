@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -20,7 +19,7 @@ type SMSData struct {
 func SendSMS(
 	fromNumber string,
 	toNumber string,
-	message string) (err error, smsResponse string) {
+	message string) (err error, smsResponse string, status int) {
 
 	msgData := url.Values{}
 	msgData.Set("To", toNumber)
@@ -40,22 +39,23 @@ func SendSMS(
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
+	log.Printf("Sending sms request via twilio: %v\n", req)
 	response, err := client.Do(req)
+	log.Printf("Sending sms via twilio completed!\n Err: %v,\nResponse: %v\n", err, response)
 
 	if err != nil {
-		log.Println(err)
-		return err, "failure"
+		return err, "failure", response.StatusCode
 	} else {
 		if response.StatusCode >= 200 && response.StatusCode < 300 {
 			var data map[string]interface{}
 			decoder := json.NewDecoder(response.Body)
 			err := decoder.Decode(&data)
 			if err == nil {
-				fmt.Println(data["sid"])
+				log.Printf("Decoded sms response!\nResponse: %v\n", data)
 			}
 		} else {
-			fmt.Println(response.Status)
+			log.Printf("Status code: %v is not between 200 and 300!\n", response.StatusCode)
 		}
 	}
-	return nil, "success"
+	return nil, "success", response.StatusCode
 }

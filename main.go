@@ -5,8 +5,10 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"log"
 	"net/http"
 	"os"
+	"sync"
 )
 
 func setupRouter() *gin.Engine {
@@ -25,52 +27,76 @@ func setupRouter() *gin.Engine {
 		c.JSON(200, gin.H{
 			"message": "I am busy!",
 		})
+		defer recovery(c, nil)
 	})
 
 	router.POST("sendMail", func(c *gin.Context) {
-		var emailData EmailData
-		if err := c.ShouldBindJSON(&emailData); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		err, response := SendMail(
-			emailData.FromName,
-			emailData.FromAddress,
-			emailData.ToParams,
-			emailData.TemplateId,
-			emailData.Params)
-		if err == nil {
-			c.JSON(200, gin.H{
-				"message": response,
-			})
-		} else {
-			c.JSON(400, gin.H{
-				"message": response,
-			})
-		}
+		var waitGroup sync.WaitGroup
+		waitGroup.Add(1)
 
+		go func() {
+			defer recovery(c, &waitGroup)
+			var emailData EmailData
+			if err := c.ShouldBindJSON(&emailData); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				waitGroup.Done()
+				return
+			}
+			log.Printf("[Send Email] Mail request to user %s, with params: %s\n", emailData.ToParams, emailData.Params)
+			err, response, status := SendMail(
+				emailData.FromName,
+				emailData.FromAddress,
+				emailData.ToParams,
+				emailData.TemplateId,
+				emailData.Params)
+			if err == nil {
+				c.JSON(status, gin.H{
+					"message": response,
+				})
+				waitGroup.Done()
+				return
+			} else {
+				c.JSON(status, gin.H{
+					"message": response,
+				})
+				waitGroup.Done()
+				return
+			}
+		}()
+		waitGroup.Wait()
 	})
 
 	router.POST("sendSms", func(c *gin.Context) {
-		var smsData SMSData
-		if err := c.ShouldBindJSON(&smsData); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		err, response := SendSMS(
-			smsData.FromNumber,
-			smsData.ToNumber,
-			smsData.Message)
-		if err == nil {
-			c.JSON(200, gin.H{
-				"message": response,
-			})
-		} else {
-			c.JSON(400, gin.H{
-				"message": response,
-			})
-		}
-
+		var waitGroup sync.WaitGroup
+		waitGroup.Add(1)
+		go func() {
+			defer recovery(c, nil)
+			var smsData SMSData
+			if err := c.ShouldBindJSON(&smsData); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				waitGroup.Done()
+				return
+			}
+			log.Printf("[Send Sms] Sms request to user %s, with params: %s\n", smsData.ToNumber, smsData.Message)
+			err, response, status := SendSMS(
+				smsData.FromNumber,
+				smsData.ToNumber,
+				smsData.Message)
+			if err == nil {
+				c.JSON(status, gin.H{
+					"message": response,
+				})
+				waitGroup.Done()
+				return
+			} else {
+				c.JSON(status, gin.H{
+					"message": response,
+				})
+				waitGroup.Done()
+				return
+			}
+		}()
+		waitGroup.Wait()
 	})
 
 	return router
@@ -92,4 +118,14 @@ func main() {
 
 	router := setupRouter()
 	_ = router.Run(":7070")
+}
+
+func recovery(context *gin.Context, waitGroup *sync.WaitGroup) {
+	if r := recover(); r != nil {
+		context.JSON(http.StatusBadRequest, gin.H{"Result": "[unexpected Notify error]. Recovered!"})
+		log.Println("Recovered ", r)
+		if waitGroup != nil {
+			waitGroup.Done()
+		}
+	}
 }

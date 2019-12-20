@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/sendgrid/sendgrid-go"
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
 	"log"
@@ -22,7 +21,7 @@ func SendMail(
 	fromAddress string,
 	toParams map[string]string,
 	templateId string,
-	params map[string]string) (err error, mailResponse string) {
+	params map[string]string) (err error, mailResponse string, status int) {
 
 	m := mail.NewV3Mail()
 
@@ -48,16 +47,12 @@ func SendMail(
 
 	client := sendgrid.NewSendClient(os.Getenv("SENDGRID_API_KEY"))
 
+	log.Printf("Sending mail request via sendgird: %v\n", m)
 	response, err := client.Send(m)
-	// TODO: more advanced logging needed here
+	log.Printf("Sending mail via sendgrid completed!\n Err: %v,\nResponse: %v\n", err, response)
 	if err != nil {
 		log.Println(err)
-		return err, "failure"
-	} else {
-		fmt.Println(response.StatusCode)
-		if response.Body == "" {
-			fmt.Println(response.Body)
-		}
+		return err, response.Body, response.StatusCode
 	}
-	return nil, "success"
+	return nil, response.Body, response.StatusCode
 }
